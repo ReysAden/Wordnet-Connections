@@ -3,8 +3,12 @@ from flask_cors import CORS
 from game import generate_puzzle, points_for, reveal_hint
 import nltk
 import secrets
+import os
 
-nltk.download('wordnet')
+nltk_data_path = '/opt/render/project/src/nltk_data'
+os.makedirs(nltk_data_path, exist_ok=True)
+nltk.data.path.append(nltk_data_path)
+nltk.download('wordnet', download_dir=nltk_data_path)
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
