@@ -25,6 +25,11 @@ def new_game():
     ancestor_names = [s.name().split('.')[0].replace('_', ' ') for s in shared]
     max_depth = shared[-1].max_depth()
 
+    ancestor_depths = {
+        s.name().split('.')[0].replace('_', ' '): s.max_depth()
+        for s in shared
+    }
+
     ancestor_slots = [
         {
             "name": s.name().split('.')[0].replace('_', ' '),
@@ -35,6 +40,7 @@ def new_game():
     ]
 
     session['ancestor_names'] = ancestor_names
+    session['ancestor_depths'] = ancestor_depths
     session['max_depth'] = max_depth
     session['hint'] = hint
     session['found'] = []
@@ -56,6 +62,7 @@ def guess():
     guess = data.get('guess', '').strip().lower()
 
     ancestor_names = session.get('ancestor_names', [])
+    ancestor_depths = session.get('ancestor_depths', {})
     found = session.get('found', [])
     guesses_left = session.get('guesses_left', 0)
     score = session.get('score', 0)
@@ -66,7 +73,7 @@ def guess():
     response = {}
 
     if guess in ancestor_names and guess not in found:
-        depth = ancestor_names.index(guess)
+        depth = ancestor_depths.get(guess, 0)
         pts = points_for(depth, max_depth)
         score += pts
         found.append(guess)
