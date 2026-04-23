@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WordNet Connections</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div id="splash" class="screen">
+    <h1>Wordnet</h1>
+    <h1>Connections</h1>
+    <p>Find the common hypernyms of two words. The deeper you go, the more points you earn.</p>
+    <button id="play-btn">Play</button>
+  </div>
+
+  <div id="rules" class="screen hidden">
+    <div class="card">
+      <h2>How to Play</h2>
+      <p>You'll be given two words. Your goal is to find as many of their common hypernyms as possible in Wordnet's hypernym tree.</p>
+      <ul>
+        <li>Type a hypernym and hit enter to guess</li>
+        <li>The deeper the hypernym, the more points it's worth</li>
+        <li>After your first guess, the intended meaning of each word is revealed</li>
+        <li>Find all hypernyms before you run out of guesses to win</li>
+      </ul>
+      <button id="start-btn">Start</button>
+    </div>
+  </div>
+
+  <div id="game" class="screen hidden">
+    <div id="words-row">
+      <span id="word1"></span>
+      <span id="word2"></span>
+    </div>
+    <div id="guess-row">
+      <input id="guess-input" type="text" placeholder="guess a hypernym..." autocomplete="off" />
+    </div>
+    <div id="depth-chart"></div>
+    <div id="game-status">
+      <span id="guesses-left"></span>
+      <span id="score"></span>
+    </div>
+  </div>
+
+  <div id="end-overlay" class="screen hidden">
+    <div class="card">
+      <h2>Game Over</h2>
+      <p id="end-summary"></p>
+      <div id="end-chain"></div>
+      <button id="play-again-btn">Play Again</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
