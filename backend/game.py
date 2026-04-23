@@ -1,17 +1,24 @@
 import random
 from nltk.corpus import wordnet as wn
 
-# Lazy-loaded cache
 NOUN_LEMMAS = None
 
-def load_nouns():
+def load_nouns(limit=3000):  # keep this LOW (2k–5k max)
     global NOUN_LEMMAS
-    if NOUN_LEMMAS is None:
-        NOUN_LEMMAS = list(set(
-            lemma.name().replace('_', ' ')
-            for synset in wn.all_synsets(pos=wn.NOUN)
-            for lemma in synset.lemmas()
-        ))
+
+    if NOUN_LEMMAS is not None:
+        return
+
+    lemmas = set()
+    for i, synset in enumerate(wn.all_synsets(pos=wn.NOUN)):
+        if i >= limit:
+            break
+        for lemma in synset.lemmas():
+            name = lemma.name().replace('_', ' ')
+            if len(name) < 20:  # avoid weird long phrases
+                lemmas.add(name)
+
+    NOUN_LEMMAS = list(lemmas)
 
 def get_random_noun():
     load_nouns()
@@ -21,8 +28,8 @@ def best_shared_hierarchy(word1, word2):
     best = []
     best_pair = (None, None)
 
-    synsets1 = wn.synsets(word1, pos=wn.NOUN)
-    synsets2 = wn.synsets(word2, pos=wn.NOUN)
+    synsets1 = wn.synsets(word1, pos=wn.NOUN)[:3]  # limit
+    synsets2 = wn.synsets(word2, pos=wn.NOUN)[:3]  # limit
 
     for syn1 in synsets1:
         for syn2 in synsets2:
@@ -30,6 +37,11 @@ def best_shared_hierarchy(word1, word2):
             hyper2 = set(syn2.closure(lambda s: s.hypernyms()))
 
             shared = hyper1.intersection(hyper2)
+
+            # skip tiny overlaps early (fast fail)
+            if len(shared) < 3:
+                continue
+
             sorted_shared = sorted(shared, key=lambda s: s.max_depth())
 
             if len(sorted_shared) > len(best):
@@ -42,7 +54,7 @@ def is_valid_puzzle(word1, word2, min_ancestors=5):
     shared, pair = best_shared_hierarchy(word1, word2)
     return len(shared) >= min_ancestors, shared, pair
 
-def generate_puzzle(min_ancestors=5, max_attempts=100):
+def generate_puzzle(min_ancestors=5, max_attempts=25):
     for _ in range(max_attempts):
         word1 = get_random_noun()
         word2 = get_random_noun()
