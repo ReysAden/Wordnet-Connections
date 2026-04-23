@@ -12,7 +12,7 @@ const scoreEl = document.getElementById('score');
 const word1El = document.getElementById('word1');
 const word2El = document.getElementById('word2');
 
-const API = 'https://wordnet-connections.onrender.com/';
+const API = 'https://wordnet-connections.onrender.com';
 
 let gameState = {
   totalAncestors: 0,
@@ -48,33 +48,32 @@ playAgainBtn.addEventListener('click', () => {
 // ---- GAME SETUP ----
 
 function startGame() {
-  const data = {
-    word1: "love",
-    word2: "gun",
-    total_ancestors: 8,
-    guesses_left: 10,
-    ancestor_slots: [
-      { name: "entity", depth: 0, pts: 14 },
-      { name: "physical entity", depth: 1, pts: 28 },
-      { name: "causal agent", depth: 2, pts: 42 },
-      { name: "object", depth: 2, pts: 42 },
-      { name: "whole", depth: 3, pts: 57 },
-      { name: "living thing", depth: 4, pts: 71 },
-      { name: "organism", depth: 5, pts: 85 },
-      { name: "person", depth: 6, pts: 100 }
-    ]
-  };
+  word1El.textContent = 'Loading...';
+  word2El.textContent = '';
 
-  word1El.textContent = data.word1.toUpperCase();
-  word2El.textContent = data.word2.toUpperCase();
-  gameState.totalAncestors = data.total_ancestors;
-  gameState.guessesLeft = data.guesses_left;
-  gameState.score = 0;
-  gameState.hintRevealed = false;
-  gameState.slots = data.ancestor_slots;
+  fetch(`${API}/new-game`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        alert('Could not generate a puzzle. Try again.');
+        return;
+      }
 
-  updateStatus();
-  buildDepthChart(data.ancestor_slots);
+      word1El.textContent = data.word1.toUpperCase();
+      word2El.textContent = data.word2.toUpperCase();
+
+      gameState.totalAncestors = data.total_ancestors;
+      gameState.guessesLeft = data.guesses_left;
+      gameState.score = 0;
+      gameState.hintRevealed = false;
+      gameState.slots = data.ancestor_slots;
+
+      updateStatus();
+      buildDepthChart(data.ancestor_slots);
+    })
+    .catch(() => {
+      word1El.textContent = 'Error loading puzzle.';
+    });
 }
 
 // ---- DEPTH CHART ----
@@ -118,22 +117,39 @@ guessInput.addEventListener('keydown', (e) => {
 });
 
 function submitGuess(guess) {
-  const mockAncestors = ['entity', 'physical entity', 'causal agent', 'object', 'whole', 'living thing', 'organism', 'person'];
+  fetch(`${API}/guess`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ guess }),
+    credentials: 'include'
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.result === 'correct') {
+        fillSlot(guess);
+        gameState.score = data.score;
+        gameState.guessesLeft = data.guesses_left;
+      } else if (data.result === 'incorrect') {
+        gameState.guessesLeft = data.guesses_left;
+        shakeInput();
+      } else if (data.result === 'already_found') {
+        shakeInput();
+      }
 
-  if (mockAncestors.includes(guess)) {
-    fillSlot(guess);
-    const slot = gameState.slots.find(s => s.name === guess);
-    gameState.score += slot ? slot.pts : 0;
-  } else {
-    gameState.guessesLeft -= 1;
-    shakeInput();
-  }
+      if (data.hint && !gameState.hintRevealed) {
+        gameState.hintRevealed = true;
+        showHint(data.hint);
+      }
 
-  updateStatus();
+      updateStatus();
 
-  if (gameState.guessesLeft <= 0) {
-    showEndCard();
-  }
+      if (data.game_over) {
+        showEndCard(data.ancestor_chain);
+      }
+    })
+    .catch(() => {
+      console.error('Guess request failed.');
+    });
 }
 
 // ---- HINT ----
@@ -179,7 +195,7 @@ function shakeInput() {
 
 // ---- END GAME ----
 
-function showEndCard() {
+function showEndCard(ancestorChain) {
   guessInput.disabled = true;
 
   const allSlots = gameState.slots;

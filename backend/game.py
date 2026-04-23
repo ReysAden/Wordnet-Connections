@@ -1,6 +1,15 @@
 import random
 from nltk.corpus import wordnet as wn
 
+# load once at startup instead of on every request
+NOUN_LEMMAS = list(set(
+    lemma.name().replace('_', ' ')
+    for synset in wn.all_synsets(pos=wn.NOUN)
+    for lemma in synset.lemmas()
+))
+
+def get_random_noun():
+    return random.choice(NOUN_LEMMAS)
 
 def best_shared_hierarchy(word1, word2):
     best = []
@@ -23,17 +32,9 @@ def best_shared_hierarchy(word1, word2):
 
     return best, best_pair
 
-
-def get_random_noun():
-    nouns = list(wn.all_synsets(pos=wn.NOUN))
-    synset = random.choice(nouns)
-    return synset.lemmas()[0].name().replace('_', ' ')
-
-
 def is_valid_puzzle(word1, word2, min_ancestors=5):
     shared, pair = best_shared_hierarchy(word1, word2)
     return len(shared) >= min_ancestors, shared, pair
-
 
 def generate_puzzle(min_ancestors=5, max_attempts=100):
     for _ in range(max_attempts):
@@ -52,10 +53,8 @@ def generate_puzzle(min_ancestors=5, max_attempts=100):
 
     return None
 
-
 def points_for(depth, max_depth):
     return round(((depth + 1) / (max_depth + 1)) * 100)
-
 
 def reveal_hint(hint):
     print("Hint — intended meanings:\n")
