@@ -1,14 +1,20 @@
 import random
 from nltk.corpus import wordnet as wn
 
-# load once at startup instead of on every request
-NOUN_LEMMAS = list(set(
-    lemma.name().replace('_', ' ')
-    for synset in wn.all_synsets(pos=wn.NOUN)
-    for lemma in synset.lemmas()
-))
+# Lazy-loaded cache
+NOUN_LEMMAS = None
+
+def load_nouns():
+    global NOUN_LEMMAS
+    if NOUN_LEMMAS is None:
+        NOUN_LEMMAS = list(set(
+            lemma.name().replace('_', ' ')
+            for synset in wn.all_synsets(pos=wn.NOUN)
+            for lemma in synset.lemmas()
+        ))
 
 def get_random_noun():
+    load_nouns()
     return random.choice(NOUN_LEMMAS)
 
 def best_shared_hierarchy(word1, word2):

@@ -5,14 +5,27 @@ import nltk
 import secrets
 import os
 
+# ---- NLTK SETUP ----
 nltk_data_path = '/opt/render/project/src/nltk_data'
 os.makedirs(nltk_data_path, exist_ok=True)
 nltk.data.path.append(nltk_data_path)
-nltk.download('wordnet', download_dir=nltk_data_path)
 
+# Download required datasets
+nltk.download('wordnet', download_dir=nltk_data_path)
+nltk.download('omw-1.4', download_dir=nltk_data_path)
+
+# ---- APP SETUP ----
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
-CORS(app)
+
+# Enable CORS with credentials (important for sessions)
+CORS(app, supports_credentials=True)
+
+# Fix cookies for cross-site (Render frontend/backend)
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+app.config['SESSION_COOKIE_SECURE'] = True
+
+# ---- ROUTES ----
 
 @app.route('/new-game', methods=['GET'])
 def new_game():
@@ -22,6 +35,7 @@ def new_game():
         return jsonify({"error": "Couldn't generate a valid puzzle. Try again."}), 500
 
     word1, word2, shared, hint = puzzle
+
     ancestor_names = [s.name().split('.')[0].replace('_', ' ') for s in shared]
     max_depth = shared[-1].max_depth()
 
@@ -55,6 +69,7 @@ def new_game():
         "guesses_left": session['guesses_left'],
         "ancestor_slots": ancestor_slots
     })
+
 
 @app.route('/guess', methods=['POST'])
 def guess():
