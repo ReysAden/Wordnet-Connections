@@ -59,7 +59,7 @@ function startGame() {
   word1El.textContent = 'Loading...';
   word2El.textContent = '';
 
-  fetch(`${API}/new-game`)
+  fetch(`${API}/new-game`, { credentials: 'include' })
     .then(res => res.json())
     .then(data => {
       if (data.error) {
