@@ -139,6 +139,18 @@ ul li {
 }
 
 /* ---- DEPTH CHART ---- */
+.depth-label-hidden {
+  visibility: hidden;
+}
+
+.depth-pts-hidden {
+  visibility: hidden;
+}
+
+.found .depth-label-hidden,
+.found .depth-pts-hidden {
+  visibility: visible;
+}
 
 #depth-chart {
   display: flex;

@@ -85,14 +85,14 @@ function buildDepthChart(slots) {
   slots.forEach(slot => {
     const div = document.createElement('div');
     div.classList.add('depth-slot');
-    div.id = `slot-${slot.name.replace(' ', '-')}`;
+    div.id = `slot-${slot.name.replaceAll(' ', '-')}`;
 
     const arrowWidth = Math.round(((slot.depth + 1) / (maxDepth + 1)) * 300);
 
     div.innerHTML = `
       <div class="depth-arrow" style="width: ${arrowWidth}px"></div>
-      <span class="depth-label">${slot.name}</span>
-      <span class="depth-pts">${slot.pts} pts</span>
+      <span class="depth-label depth-label-hidden">${slot.name}</span>
+      <span class="depth-pts depth-pts-hidden">${slot.pts} pts</span>
     `;
 
     depthChart.appendChild(div);
@@ -100,7 +100,7 @@ function buildDepthChart(slots) {
 }
 
 function fillSlot(name) {
-  const id = `slot-${name.replace(' ', '-')}`;
+  const id = `slot-${name.replaceAll(' ', '-')}`;
   const slot = document.getElementById(id);
   if (slot) slot.classList.add('found');
 }
@@ -125,16 +125,18 @@ function submitGuess(guess) {
   })
     .then(res => res.json())
     .then(data => {
+      console.log(data);
+
       if (data.result === 'correct') {
         fillSlot(guess);
         gameState.score = data.score;
-        gameState.guessesLeft = data.guesses_left;
       } else if (data.result === 'incorrect') {
-        gameState.guessesLeft = data.guesses_left;
         shakeInput();
       } else if (data.result === 'already_found') {
         shakeInput();
       }
+
+      gameState.guessesLeft = data.guesses_left;
 
       if (data.hint && !gameState.hintRevealed) {
         gameState.hintRevealed = true;
@@ -201,15 +203,15 @@ function showEndCard(ancestorChain) {
   const allSlots = gameState.slots;
   const maxDepth = Math.max(...allSlots.map(s => s.depth));
   const found = allSlots.filter(s =>
-    document.getElementById(`slot-${s.name.replace(' ', '-')}`).classList.contains('found')
-  );
+  document.getElementById(`slot-${s.name.replaceAll(' ', '-')}`).classList.contains('found')
+);
 
   document.getElementById('end-summary').innerHTML =
     `You scored <strong>${gameState.score} pts</strong> and found <strong>${found.length}</strong> of <strong>${allSlots.length}</strong> hypernyms.`;
 
   const chain = document.getElementById('end-chain');
   chain.innerHTML = allSlots.map(slot => {
-    const wasFound = document.getElementById(`slot-${slot.name.replace(' ', '-')}`).classList.contains('found');
+    const wasFound = document.getElementById(`slot-${slot.name.replaceAll(' ', '-')}`).classList.contains('found');
     const arrowWidth = Math.round(((slot.depth + 1) / (maxDepth + 1)) * 260);
     return `
       <div class="depth-slot ${wasFound ? 'found' : ''}">
