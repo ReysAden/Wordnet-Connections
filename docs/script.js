@@ -21,7 +21,9 @@ let gameState = {
   guessesLeft: 0,
   score: 0,
   hintRevealed: false,
-  slots: []
+  slots: [],
+  found: [],
+  gameOverTriggered: false
 };
 
 // ---- NAVIGATION ----
@@ -42,8 +44,12 @@ playAgainBtn.addEventListener('click', () => {
   game.classList.remove('hidden');
   guessInput.disabled = false;
   depthChart.innerHTML = '';
+
   gameState.score = 0;
   gameState.hintRevealed = false;
+  gameState.found = [];
+  gameState.gameOverTriggered = false;
+
   startGame();
 });
 
@@ -69,6 +75,8 @@ function startGame() {
       gameState.score = 0;
       gameState.hintRevealed = false;
       gameState.slots = data.ancestor_slots;
+      gameState.found = [];
+      gameState.gameOverTriggered = false;
 
       updateStatus();
       buildDepthChart(data.ancestor_slots);
@@ -136,14 +144,16 @@ function submitGuess(guess) {
       if (data.result === 'correct') {
         fillSlot(guess);
         gameState.score = data.score;
-      } else if (data.result === 'incorrect') {
-        shakeInput();
-      } else if (data.result === 'already_found') {
+
+        // sync backend truth
+        gameState.found = data.found || [];
+      }
+
+      if (data.result === 'incorrect' || data.result === 'already_found') {
         shakeInput();
       }
 
-      // Always trust backend
-      gameState.guessesLeft = data.guesses_left;
+      gameState.guessesLeft = data.guesses_left ?? gameState.guessesLeft;
 
       if (data.hint && !gameState.hintRevealed) {
         gameState.hintRevealed = true;
@@ -152,7 +162,8 @@ function submitGuess(guess) {
 
       updateStatus();
 
-      if (data.game_over) {
+      if (data.game_over && !gameState.gameOverTriggered) {
+        gameState.gameOverTriggered = true;
         guessInput.disabled = true;
         showEndCard(data.ancestor_chain);
       }
@@ -198,7 +209,7 @@ function updateStatus() {
   scoreEl.textContent = `Score: ${gameState.score} pts`;
 }
 
-// ---- ANIMATIONS ----
+// ---- ANIMATION ----
 
 function shakeInput() {
   guessInput.style.animation = 'none';
@@ -213,17 +224,20 @@ function showEndCard(ancestorChain) {
 
   const allSlots = gameState.slots;
   const maxDepth = Math.max(...allSlots.map(s => s.depth));
+
   const found = allSlots.filter(s =>
-  document.getElementById(`slot-${s.name.replaceAll(' ', '-')}`).classList.contains('found')
-);
+    document.getElementById(`slot-${s.name.replaceAll(' ', '-')}`).classList.contains('found')
+  );
 
   document.getElementById('end-summary').innerHTML =
     `You scored <strong>${gameState.score} pts</strong> and found <strong>${found.length}</strong> of <strong>${allSlots.length}</strong> hypernyms.`;
 
   const chain = document.getElementById('end-chain');
+
   chain.innerHTML = allSlots.map(slot => {
     const wasFound = document.getElementById(`slot-${slot.name.replaceAll(' ', '-')}`).classList.contains('found');
     const arrowWidth = Math.round(((slot.depth + 1) / (maxDepth + 1)) * 260);
+
     return `
       <div class="depth-slot ${wasFound ? 'found' : ''}">
         <div class="depth-arrow" style="width: ${arrowWidth}px"></div>
