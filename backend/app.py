@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
-from game import generate_puzzle, points_for, reveal_hint
+from game import generate_puzzle, points_for
 import nltk
 import secrets
 import os
@@ -10,7 +10,6 @@ nltk_data_path = '/opt/render/project/src/nltk_data'
 os.makedirs(nltk_data_path, exist_ok=True)
 nltk.data.path.append(nltk_data_path)
 
-# Download required datasets
 nltk.download('wordnet', download_dir=nltk_data_path)
 nltk.download('omw-1.4', download_dir=nltk_data_path)
 
@@ -18,10 +17,8 @@ nltk.download('omw-1.4', download_dir=nltk_data_path)
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 
-# Enable CORS with credentials (important for sessions)
 CORS(app, supports_credentials=True)
 
-# Fix cookies for cross-site (Render frontend/backend)
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['SESSION_COOKIE_SECURE'] = True
 
@@ -36,14 +33,20 @@ def new_game():
 
     word1, word2, shared, hint = puzzle
 
-    ancestor_names = [s.name().split('.')[0].replace('_', ' ') for s in shared]
-    max_depth = shared[-1].max_depth()
+    # Normalize everything to lowercase for consistency
+    ancestor_names = [
+        s.name().split('.')[0].replace('_', ' ').lower()
+        for s in shared
+    ]
 
     ancestor_depths = {
-    s.name().split('.')[0].replace('_', ' ').lower(): s.max_depth()
-    for s in shared
+        s.name().split('.')[0].replace('_', ' ').lower(): s.max_depth()
+        for s in shared
     }
 
+    max_depth = max(s.max_depth() for s in shared)
+
+    # Keep display version (original casing) for frontend
     ancestor_slots = [
         {
             "name": s.name().split('.')[0].replace('_', ' '),
@@ -76,7 +79,7 @@ def guess():
     data = request.get_json()
     guess = data.get('guess', '').strip().lower().replace('_', ' ')
 
-    ancestor_names = [a.lower() for a in session.get('ancestor_names', [])]
+    ancestor_names = session.get('ancestor_names', [])
     ancestor_depths = session.get('ancestor_depths', {})
     found = session.get('found', [])
     guesses_left = session.get('guesses_left', 0)
@@ -88,34 +91,35 @@ def guess():
     response = {}
 
     # ---- CORRECT GUESS ----
-    if guess in ancestor_names and guess not in found:
-        depth = ancestor_depths.get(guess, 0)
-        pts = points_for(depth, max_depth)
+    if guess in ancestor_names:
+        if guess in found:
+            response['result'] = 'already_found'
+        else:
+            # Prevent duplicate issues (race condition safety)
+            found = list(set(found))
 
-        score += pts
-        found.append(guess)
+            depth = ancestor_depths.get(guess, 0)
+            pts = points_for(depth, max_depth)
 
-        session['found'] = found
-        session['score'] = score
+            found.append(guess)
+            score += pts
 
-        response['result'] = 'correct'
-        response['pts'] = pts
-        response['depth'] = depth
-        response['score'] = score
-        response['found'] = found
+            session['found'] = found
+            session['score'] = score
 
-        if len(found) == len(ancestor_names):
-            response['game_over'] = True
-            response['message'] = 'You found them all!'
-            response['ancestor_chain'] = ancestor_names
+            response['result'] = 'correct'
+            response['pts'] = pts
+            response['depth'] = depth
+            response['score'] = score
+            response['found'] = found
 
-    # ---- ALREADY FOUND ----
-    elif guess in found:
-        response['result'] = 'already_found'
+            if len(set(found)) == len(set(ancestor_names)):
+                response['game_over'] = True
+                response['message'] = 'You found them all!'
+                response['ancestor_chain'] = ancestor_names
 
-    # ---- INCORRECT ----
+    # ---- INCORRECT GUESS ----
     else:
-        # Clamp to 0 (prevents negative)
         guesses_left = max(0, guesses_left - 1)
         session['guesses_left'] = guesses_left
 
@@ -133,10 +137,11 @@ def guess():
         session['hint_revealed'] = True
         response['hint'] = hint
 
-    # Always send authoritative value
+    # Always return authoritative guesses_left
     response['guesses_left'] = session.get('guesses_left', 0)
 
     return jsonify(response)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
