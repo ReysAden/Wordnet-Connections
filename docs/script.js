@@ -14,6 +14,8 @@ const word2El = document.getElementById('word2');
 
 const API = 'https://wordnet-connections.onrender.com';
 
+let isSubmitting = false;
+
 let gameState = {
   totalAncestors: 0,
   guessesLeft: 0,
@@ -117,6 +119,10 @@ guessInput.addEventListener('keydown', (e) => {
 });
 
 function submitGuess(guess) {
+  if (isSubmitting || guessInput.disabled) return;
+
+  isSubmitting = true;
+
   fetch(`${API}/guess`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -136,6 +142,7 @@ function submitGuess(guess) {
         shakeInput();
       }
 
+      // Always trust backend
       gameState.guessesLeft = data.guesses_left;
 
       if (data.hint && !gameState.hintRevealed) {
@@ -146,11 +153,15 @@ function submitGuess(guess) {
       updateStatus();
 
       if (data.game_over) {
+        guessInput.disabled = true;
         showEndCard(data.ancestor_chain);
       }
     })
     .catch(() => {
       console.error('Guess request failed.');
+    })
+    .finally(() => {
+      isSubmitting = false;
     });
 }
 

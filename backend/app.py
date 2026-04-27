@@ -40,8 +40,8 @@ def new_game():
     max_depth = shared[-1].max_depth()
 
     ancestor_depths = {
-        s.name().split('.')[0].replace('_', ' '): s.max_depth()
-        for s in shared
+    s.name().split('.')[0].replace('_', ' ').lower(): s.max_depth()
+    for s in shared
     }
 
     ancestor_slots = [
@@ -74,9 +74,9 @@ def new_game():
 @app.route('/guess', methods=['POST'])
 def guess():
     data = request.get_json()
-    guess = data.get('guess', '').strip().lower()
+    guess = data.get('guess', '').strip().lower().replace('_', ' ')
 
-    ancestor_names = session.get('ancestor_names', [])
+    ancestor_names = [a.lower() for a in session.get('ancestor_names', [])]
     ancestor_depths = session.get('ancestor_depths', {})
     found = session.get('found', [])
     guesses_left = session.get('guesses_left', 0)
@@ -87,9 +87,11 @@ def guess():
 
     response = {}
 
+    # ---- CORRECT GUESS ----
     if guess in ancestor_names and guess not in found:
         depth = ancestor_depths.get(guess, 0)
         pts = points_for(depth, max_depth)
+
         score += pts
         found.append(guess)
 
@@ -107,25 +109,31 @@ def guess():
             response['message'] = 'You found them all!'
             response['ancestor_chain'] = ancestor_names
 
+    # ---- ALREADY FOUND ----
     elif guess in found:
         response['result'] = 'already_found'
 
+    # ---- INCORRECT ----
     else:
-        guesses_left -= 1
+        # Clamp to 0 (prevents negative)
+        guesses_left = max(0, guesses_left - 1)
         session['guesses_left'] = guesses_left
+
         response['result'] = 'incorrect'
         response['guesses_left'] = guesses_left
 
-        if guesses_left == 0:
+        if guesses_left <= 0:
             response['game_over'] = True
             response['message'] = 'Out of guesses!'
             response['score'] = score
             response['ancestor_chain'] = ancestor_names
 
+    # ---- HINT ----
     if not hint_revealed:
         session['hint_revealed'] = True
         response['hint'] = hint
 
+    # Always send authoritative value
     response['guesses_left'] = session.get('guesses_left', 0)
 
     return jsonify(response)
