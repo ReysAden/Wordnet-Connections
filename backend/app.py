@@ -140,6 +140,13 @@ def guess():
     # Always return authoritative guesses_left
     response['guesses_left'] = session.get('guesses_left', 0)
 
+    app.logger.info({
+        "event": "guess",
+        "guess": guess,
+        "length": len(guess),
+        "correct": guess in ancestor_names
+    })
+
     return jsonify(response)
 
 
