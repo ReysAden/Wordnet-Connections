@@ -4,7 +4,9 @@ from game import generate_puzzle, points_for
 import nltk
 import secrets
 import os
-
+import logging
+logging.basicConfig(level=logging.INFO)
+app.logger.setLevel(logging.INFO)
 # ---- NLTK SETUP ----
 nltk_data_path = '/opt/render/project/src/nltk_data'
 os.makedirs(nltk_data_path, exist_ok=True)
