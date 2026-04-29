@@ -5,8 +5,7 @@ import nltk
 import secrets
 import os
 import logging
-logging.basicConfig(level=logging.INFO)
-app.logger.setLevel(logging.INFO)
+
 # ---- NLTK SETUP ----
 nltk_data_path = '/opt/render/project/src/nltk_data'
 os.makedirs(nltk_data_path, exist_ok=True)
@@ -18,6 +17,10 @@ nltk.download('omw-1.4', download_dir=nltk_data_path)
 # ---- APP SETUP ----
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
+
+# ---- LOGGING SETUP ----
+logging.basicConfig(level=logging.INFO)
+app.logger.setLevel(logging.INFO)
 
 CORS(app, supports_credentials=True)
 
@@ -35,7 +38,6 @@ def new_game():
 
     word1, word2, shared, hint = puzzle
 
-    # Normalize everything to lowercase for consistency
     ancestor_names = [
         s.name().split('.')[0].replace('_', ' ').lower()
         for s in shared
@@ -48,7 +50,6 @@ def new_game():
 
     max_depth = max(s.max_depth() for s in shared)
 
-    # Keep display version (original casing) for frontend
     ancestor_slots = [
         {
             "name": s.name().split('.')[0].replace('_', ' '),
