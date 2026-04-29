@@ -79,7 +79,11 @@ def new_game():
 @app.route('/guess', methods=['POST'])
 def guess():
     data = request.get_json()
-    guess = data.get('guess', '').strip().lower().replace('_', ' ')
+    raw_input = data.get('guess', '')
+
+    app.logger.info(f"RAW INPUT RECEIVED: '{raw_input}'")
+
+    guess = raw_input.strip().lower().replace('_', ' ')
 
     ancestor_names = session.get('ancestor_names', [])
     ancestor_depths = session.get('ancestor_depths', {})
@@ -97,7 +101,6 @@ def guess():
         if guess in found:
             response['result'] = 'already_found'
         else:
-            # Prevent duplicate issues (race condition safety)
             found = list(set(found))
 
             depth = ancestor_depths.get(guess, 0)
@@ -139,12 +142,12 @@ def guess():
         session['hint_revealed'] = True
         response['hint'] = hint
 
-    # Always return authoritative guesses_left
     response['guesses_left'] = session.get('guesses_left', 0)
 
     app.logger.info({
         "event": "guess",
-        "guess": guess,
+        "raw": raw_input,
+        "processed": guess,
         "length": len(guess),
         "correct": guess in ancestor_names
     })
